@@ -67,7 +67,7 @@
                     android:id="@+id/questionTotalText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="of 10"
+                    android:text="of 20"
                     android:textColor="@color/purple_700"
                     android:textSize="16sp" />
             </LinearLayout>

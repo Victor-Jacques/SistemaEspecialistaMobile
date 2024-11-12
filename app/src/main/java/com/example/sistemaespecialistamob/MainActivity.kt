@@ -8,53 +8,76 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
 
 class MainActivity : AppCompatActivity() {
+    private val apiRepository = ApiRepository()
     private var currentQuestionIndex = 0
-    private val questions = listOf(
-        "I enjoy being the center of attention at social gatherings.",
-        "I prefer to think things through carefully before making decisions.",
-        "I find it easy to empathize with others' feelings.",
-        "I enjoy having a structured daily routine.",
-        "I often take initiative in social situations.",
-        "I prefer working on creative projects rather than analytical ones.",
-        "I tend to plan ahead rather than be spontaneous.",
-        "I enjoy deep conversations about abstract concepts.",
-        "I feel energized after spending time with others.",
-        "I prefer practical, hands-on learning experiences."
-    )
-    private lateinit var optionButtons: List<MaterialButton>
+    private val selectedAnswers = mutableListOf<Int>() // Armazena respostas
+    private val perfis: List<String> = listOf("dominancia", "influencia", "estabilidade", "conformidade")
+    private val questionsPerPerfil = 5 // Número de perguntas por perfil
 
-    // Lista para armazenar respostas (0-4 para cada opção, -1 se não houver resposta)
-    private val selectedAnswers = MutableList(questions.size) { -1 }
+    // Lista de botões de opção para manipulação
+    private lateinit var optionButtons: List<MaterialButton>
+    private var selectedButtonIndex: Int? = null // Índice do botão selecionado para a pergunta atual
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         setupUI()
-        updateQuestion()
+        loadQuestion() // Carrega a primeira pergunta
+    }
+
+    private fun loadQuestion() {
+        val perfilIndex = currentQuestionIndex / questionsPerPerfil // Identifica o perfil atual
+        val questionNumber = (currentQuestionIndex % questionsPerPerfil) + 1 // Número da pergunta dentro do perfil
+
+        if (perfilIndex < perfis.size) {
+            selectPerfil(perfis[perfilIndex], questionNumber)
+        } else {
+            findViewById<TextView>(R.id.questionText).text = "Fim do questionário"
+        }
+
+        // Resetar a cor dos botões ao carregar uma nova pergunta
+        resetButtonColors()
+        // Atualiza o botão selecionado, se já existir uma resposta para essa pergunta
+        selectedButtonIndex = selectedAnswers.getOrNull(currentQuestionIndex)
+        selectedButtonIndex?.let { highlightButton(it) }
+    }
+
+    private fun selectPerfil(perfil: String, questionNumber: Int) {
+        apiRepository.fetchQuestion(perfil, questionNumber) { question ->
+            if (question != null) {
+                updateQuestionUI(question)
+            } else {
+                findViewById<TextView>(R.id.questionText).text = "Erro ao carregar a questão"
+            }
+        }
     }
 
     private fun setupUI() {
         findViewById<MaterialButton>(R.id.previousButton).setOnClickListener {
             if (currentQuestionIndex > 0) {
                 currentQuestionIndex--
-                updateQuestion()
+                loadQuestion() // Carrega a pergunta anterior
+                updateNavigationButtons()
             }
         }
 
         findViewById<MaterialButton>(R.id.nextButton).setOnClickListener {
-            if (currentQuestionIndex < questions.size - 1) {
+            if (currentQuestionIndex < perfis.size * questionsPerPerfil - 1) {
                 currentQuestionIndex++
-                updateQuestion()
+                loadQuestion() // Carrega a próxima pergunta
+                updateNavigationButtons()
+            } else {
+                findViewById<TextView>(R.id.questionText).text = "Fim do questionário"
             }
         }
 
         optionButtons = listOf(
-            findViewById(R.id.stronglyAgreeButton),
-            findViewById(R.id.agreeButton),
-            findViewById(R.id.neutralButton),
-            findViewById(R.id.disagreeButton),
-            findViewById(R.id.stronglyDisagreeButton)
+            findViewById<MaterialButton>(R.id.stronglyAgreeButton),
+            findViewById<MaterialButton>(R.id.agreeButton),
+            findViewById<MaterialButton>(R.id.neutralButton),
+            findViewById<MaterialButton>(R.id.disagreeButton),
+            findViewById<MaterialButton>(R.id.stronglyDisagreeButton)
         )
 
         optionButtons.forEachIndexed { index, button ->
@@ -62,51 +85,55 @@ class MainActivity : AppCompatActivity() {
                 onOptionSelected(button, index)
             }
         }
+
+        updateNavigationButtons()
     }
 
-    private fun updateQuestion() {
-        // Atualiza o texto da pergunta
-        findViewById<TextView>(R.id.questionText).text = questions[currentQuestionIndex]
+    private fun updateQuestionUI(questionText: String) {
+        val totalQuestions = perfis.size * questionsPerPerfil
+        findViewById<TextView>(R.id.questionText).text = questionText
+        findViewById<TextView>(R.id.questionNumberText).text = "Pergunta ${currentQuestionIndex + 1} de $totalQuestions"
+        findViewById<ProgressBar>(R.id.progressBar).progress = ((currentQuestionIndex + 1) * 100) / totalQuestions
 
-        // Atualiza o número da pergunta
-        findViewById<TextView>(R.id.questionNumberText).text = "${currentQuestionIndex + 1}"
-
-        // Atualiza a barra de progresso
-        findViewById<ProgressBar>(R.id.progressBar).progress =
-            ((currentQuestionIndex + 1) * 100) / questions.size
-
-        // Exibe o botão "Previous" apenas se não estivermos na primeira pergunta
-        findViewById<MaterialButton>(R.id.previousButton).visibility =
-            if (currentQuestionIndex > 0) View.VISIBLE else View.GONE
-
-        // Habilita/desabilita o botão "Next" com base na resposta atual
-        val nextButton = findViewById<MaterialButton>(R.id.nextButton)
-        nextButton.isEnabled = selectedAnswers[currentQuestionIndex] != -1
-
-        // Restaura a seleção da resposta para a pergunta atual
-        resetButtonColors()
-        val selectedAnswer = selectedAnswers[currentQuestionIndex]
-        if (selectedAnswer != -1) {
-            optionButtons[selectedAnswer].backgroundTintList = getColorStateList(R.color.purple_700)
-        }
+        // Restaura o estado do botão "Next" para o caso em que uma resposta não foi selecionada ainda
+        findViewById<MaterialButton>(R.id.nextButton).isEnabled = selectedAnswers.getOrNull(currentQuestionIndex) != null
     }
 
     private fun onOptionSelected(selectedButton: MaterialButton, answerIndex: Int) {
-        // Armazena a resposta selecionada para a pergunta atual
-        selectedAnswers[currentQuestionIndex] = answerIndex
+        // Salva o índice da resposta selecionada
+        if (selectedAnswers.size > currentQuestionIndex) {
+            selectedAnswers[currentQuestionIndex] = answerIndex
+        } else {
+            selectedAnswers.add(answerIndex)
+        }
 
-        // Define a cor de destaque para o botão selecionado e reseta os outros
-        resetButtonColors()
-        selectedButton.backgroundTintList = getColorStateList(R.color.purple_700)
+        // Armazena o índice do botão selecionado
+        selectedButtonIndex = answerIndex
 
-        // Habilita o botão "Next" agora que uma resposta foi selecionada
+        // Muda a cor do botão selecionado
+        highlightButton(answerIndex)
         findViewById<MaterialButton>(R.id.nextButton).isEnabled = true
     }
 
+    private fun highlightButton(index: Int) {
+        resetButtonColors() // Remove as cores dos botões anteriores
+        optionButtons[index].setBackgroundColor(resources.getColor(R.color.purple_700)) // Define a cor do botão selecionado
+        optionButtons[index].setTextColor(resources.getColor(R.color.white)) // Define a cor do texto do botão selecionado
+    }
+
     private fun resetButtonColors() {
-        // Reseta as cores de todos os botões para o padrão
+        // Reseta a cor de fundo e do texto de todos os botões para o padrão
         optionButtons.forEach { button ->
-            button.backgroundTintList = getColorStateList(R.color.white)
+            button.setBackgroundColor(resources.getColor(R.color.white))
+            button.setTextColor(resources.getColor(R.color.gray_800))
         }
+    }
+
+    private fun updateNavigationButtons() {
+        findViewById<MaterialButton>(R.id.previousButton).visibility =
+            if (currentQuestionIndex > 0) View.VISIBLE else View.GONE
+
+        findViewById<MaterialButton>(R.id.nextButton).isEnabled =
+            selectedAnswers.getOrNull(currentQuestionIndex) != null
     }
 }
