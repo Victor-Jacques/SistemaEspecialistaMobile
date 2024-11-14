@@ -14,15 +14,14 @@ class ResultActivity : AppCompatActivity() {
 
         val resultText = findViewById<TextView>(R.id.resultText)
 
-        // Recupera o HashMap com o resultado
-        val resultMap = intent.getSerializableExtra("RESULTADOS") as? HashMap<String, String>
+        // Recupera a String passada
+        val resultString = intent.getStringExtra("RESULTADO")
 
-        // Exibe o resultado de forma organizada
-        if (resultMap != null) {
-            val resultString = resultMap.entries.joinToString("\n") { "${it.key}: ${it.value}" }
-            resultText.text = resultString
+        // Verifica se a String não é nula
+        if (!resultString.isNullOrEmpty()) {
+            resultText.text = resultString // Exibe o resultado no TextView
         } else {
-            resultText.text = "Nenhum resultado disponível"
+            resultText.text = "Nenhum resultado disponível" // Caso não haja dado
         }
 
         // Botão para refazer o teste
@@ -35,4 +34,3 @@ class ResultActivity : AppCompatActivity() {
         }
     }
 }
-

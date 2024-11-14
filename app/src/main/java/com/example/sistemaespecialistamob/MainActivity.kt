@@ -11,6 +11,7 @@ import com.google.android.material.button.MaterialButton
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import java.io.IOException
+import kotlin.math.log
 
 class MainActivity : AppCompatActivity() {
     private val apiRepository = ApiRepository()
@@ -20,6 +21,7 @@ class MainActivity : AppCompatActivity() {
     private val questionsPerPerfil = 5
     private val totalQuestions = perfis.size * questionsPerPerfil
     val result = Resultado()
+    val builder = StringBuilder()
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -96,11 +98,11 @@ class MainActivity : AppCompatActivity() {
 
 
         val optionButtons = listOf(
-            findViewById<MaterialButton>(R.id.stronglyAgreeButton),
-            findViewById<MaterialButton>(R.id.agreeButton),
-            findViewById<MaterialButton>(R.id.neutralButton),
+            findViewById<MaterialButton>(R.id.stronglyDisagreeButton),
             findViewById<MaterialButton>(R.id.disagreeButton),
-            findViewById<MaterialButton>(R.id.stronglyDisagreeButton)
+            findViewById<MaterialButton>(R.id.neutralButton),
+            findViewById<MaterialButton>(R.id.agreeButton),
+            findViewById<MaterialButton>(R.id.stronglyAgreeButton)
         )
 
         optionButtons.forEachIndexed { index, button ->
@@ -163,40 +165,50 @@ class MainActivity : AppCompatActivity() {
             separa_resp(i)
         }
 
-        val perfilResult: Map<String, List<Int>> = mapOf(
-            "dominancia" to result.dominancia,
-            "influencia" to result.influencia,
-            "estabilidade" to result.estabilidade,
-            "conformidade" to result.conformidade
-        )
 
 
+        for(i in 1..5){
+            if(i ==1){
+                resultado("dominancia", result.dominancia)
+            }else if(i == 2){
+                resultado("influencia", result.influencia)
+            }else if(i == 3){
+                resultado("estabilidade", result.estabilidade)
+            }else if (i==4){
+                resultado("conformidade", result.conformidade)
+            }
+        }
+
+        var stringResposta = builder.toString()
+        val intent = Intent(this, ResultActivity::class.java)
+        intent.putExtra("RESULTADO", stringResposta) // Passando a string para a ResultActivity
+        startActivity(intent)
     }
 
-    private fun resultado(): String{
+    private fun resultado(perfil: String, respostaPefil: List<Int>){
 
-        apiRepository.scoreCalc("dominancia", result.dominancia) { resultIndividual ->
+        apiRepository.scoreCalc(perfil, respostaPefil) { resultIndividual ->
             if (resultIndividual != null) {
-                val sla = resultIndividual
+                builder.append(resultIndividual.toString())
             } else {
                 Log.e("MainActivity", "Erro ao calcular o score completo.")
             }
         }
 
-        return ""
+
     }
 
     private fun separa_resp(i: Int){
-        if(i <= 5){
+        if(i <= 4){
             result.dominancia.add(selectedAnswers.get(i))
         }
-        else if(i <= 10){
+        else if(i <= 9){
             result.influencia.add(selectedAnswers.get(i))
         }
-        else if(i <= 15){
+        else if(i <= 14){
             result.estabilidade.add(selectedAnswers.get(i))
         }
-        else if(i <= 20){
+        else if(i <= 19){
             result.conformidade.add(selectedAnswers.get(i))
         }
 
