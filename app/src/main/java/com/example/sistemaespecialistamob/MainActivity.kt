@@ -22,6 +22,7 @@ class MainActivity : AppCompatActivity() {
     private val totalQuestions = perfis.size * questionsPerPerfil
     val result = Resultado()
     val builder = StringBuilder()
+    var completedCalls = 0 // Contador para chamadas concluídas
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -114,6 +115,7 @@ class MainActivity : AppCompatActivity() {
         updateNavigationButtons()
     }
 
+
     private fun updateQuestionUI(questionText: String) {
         findViewById<TextView>(R.id.questionText).text = questionText
         findViewById<TextView>(R.id.questionNumberText).text = "Pergunta ${currentQuestionIndex + 1} de $totalQuestions"
@@ -161,57 +163,55 @@ class MainActivity : AppCompatActivity() {
 
     private fun calcularScore() {
         // Divida as respostas para os perfis
-        for(i in 0..19){
+        for (i in 0..19) {
             separa_resp(i)
         }
 
 
-
-        for(i in 1..5){
-            if(i ==1){
-                resultado("dominancia", result.dominancia)
-            }else if(i == 2){
-                resultado("influencia", result.influencia)
-            }else if(i == 3){
-                resultado("estabilidade", result.estabilidade)
-            }else if (i==4){
-                resultado("conformidade", result.conformidade)
+        for (i in 1..4) { // Ajustado para 4 perfis: dominância, influência, estabilidade, conformidade
+            when (i) {
+                1 -> resultado("dominancia", result.dominancia) { completedCalls++ }
+                2 -> resultado("influencia", result.influencia) { completedCalls++ }
+                3 -> resultado("estabilidade", result.estabilidade) { completedCalls++ }
+                4 -> resultado("conformidade", result.conformidade) { completedCalls++ }
             }
         }
-
-        var stringResposta = builder.toString()
-        val intent = Intent(this, ResultActivity::class.java)
-        intent.putExtra("RESULTADO", stringResposta) // Passando a string para a ResultActivity
-        startActivity(intent)
     }
 
-    private fun resultado(perfil: String, respostaPefil: List<Int>){
-
-        apiRepository.scoreCalc(perfil, respostaPefil) { resultIndividual ->
+    private fun resultado(perfil: String, respostaPerfil: List<Int>, onCompleted: () -> Unit) {
+        apiRepository.scoreCalc(perfil, respostaPerfil) { resultIndividual ->
             if (resultIndividual != null) {
-                builder.append(resultIndividual.toString())
+                builder.append(resultIndividual.toString()).append("\n")
             } else {
                 Log.e("MainActivity", "Erro ao calcular o score completo.")
             }
+
+            // Chama a função onCompleted quando a operação estiver concluída
+            onCompleted()
+
+            // Verifica se todas as chamadas foram concluídas
+            if (completedCalls == 4) { // 4 chamadas, uma para cada perfil
+                finalizarCalculo()
+            }
         }
-
-
     }
 
-    private fun separa_resp(i: Int){
-        if(i <= 4){
-            result.dominancia.add(selectedAnswers.get(i))
-        }
-        else if(i <= 9){
-            result.influencia.add(selectedAnswers.get(i))
-        }
-        else if(i <= 14){
-            result.estabilidade.add(selectedAnswers.get(i))
-        }
-        else if(i <= 19){
-            result.conformidade.add(selectedAnswers.get(i))
-        }
+    // Função para iniciar a ResultActivity após o cálculo completo
+    private fun finalizarCalculo() {
+        val stringResposta = builder.toString()
+        val intent = Intent(this, ResultActivity::class.java)
+        intent.putExtra("RESULTADO", stringResposta)
+        startActivity(intent)
+    }
 
+    // Método para separar as respostas dos perfis
+    private fun separa_resp(i: Int) {
+        when {
+            i <= 4 -> result.dominancia.add(selectedAnswers[i])
+            i <= 9 -> result.influencia.add(selectedAnswers[i])
+            i <= 14 -> result.estabilidade.add(selectedAnswers[i])
+            i <= 19 -> result.conformidade.add(selectedAnswers[i])
+        }
     }
 
 

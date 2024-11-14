@@ -30,6 +30,8 @@ class ApiRepository {
     }
 
 
+
+
     fun scoreCalc(perfil: String, answers: List<Int>, onResult: (String?) -> Unit) {
         val call = RetrofitInstance.apiService.scoreCalc(perfil, answers)
         call.enqueue(object : Callback<Map<String, String>> {
@@ -49,20 +51,32 @@ class ApiRepository {
     }
 
     fun completeScoreCalc(answers: Map<String, List<Int>>, onResult: (Map<String, String>?) -> Unit) {
-        val call = RetrofitInstance.apiService.completeScoreCalc(answers)
-        call.enqueue(object : Callback<Map<String, String>> {
-            override fun onResponse(call: Call<Map<String, String>>, response: Response<Map<String, String>>) {
-                if (response.isSuccessful) {
-                    val results = response.body()
-                    onResult(results)
-                } else {
-                    onResult(null)
-                }
-            }
+            RetrofitInstance.apiService.completeScoreCalc(answers).enqueue(object : Callback<Map<String, String>> {
+                override fun onResponse(
+                    call: Call<Map<String, String>>,
+                    response: Response<Map<String, String>>
+                ) {
+                    if (response.isSuccessful) {
+                        val results = response.body()
 
-            override fun onFailure(call: Call<Map<String, String>>, t: Throwable) {
-                onResult(null)
-            }
-        })
+                        val dominancia = results?.get("dominancia")
+                        val influencia = results?.get("influencia")
+                        val conformidade = results?.get("conformidade")
+                        val estabilidade = results?.get("estabilidade")
+
+                        println("Dominância: $dominancia")
+                        println("Influência: $influencia")
+                        println("Conformidade: $conformidade")
+                        println("Estabilidade: $estabilidade")
+                    } else {
+                        println("Erro na resposta: ${response.code()}")
+                    }
+                }
+
+                override fun onFailure(call: Call<Map<String, String>>, t: Throwable) {
+                    println("Falha na chamada: ${t.message}")
+                }
+            })
+        }
+
     }
-}
