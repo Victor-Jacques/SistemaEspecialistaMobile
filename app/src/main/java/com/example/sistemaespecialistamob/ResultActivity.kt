@@ -12,13 +12,18 @@ class ResultActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_result)
 
-        // Configurando o título e o texto do resultado
-        val resultTitle = findViewById<TextView>(R.id.resultTitle)
         val resultText = findViewById<TextView>(R.id.resultText)
 
-        // Aqui, carregamos o resultado a partir das respostas (você pode personalizar essa parte)
-        val resultado = calcularResultado()
-        resultText.text = resultado
+        // Recupera o HashMap com o resultado
+        val resultMap = intent.getSerializableExtra("RESULTADOS") as? HashMap<String, String>
+
+        // Exibe o resultado de forma organizada
+        if (resultMap != null) {
+            val resultString = resultMap.entries.joinToString("\n") { "${it.key}: ${it.value}" }
+            resultText.text = resultString
+        } else {
+            resultText.text = "Nenhum resultado disponível"
+        }
 
         // Botão para refazer o teste
         val retryButton = findViewById<Button>(R.id.retryButton)
@@ -29,11 +34,5 @@ class ResultActivity : AppCompatActivity() {
             finish() // Fecha a ResultActivity para não acumular no histórico
         }
     }
-
-    // Função para calcular o resultado do quiz (exemplo, personalize conforme a lógica)
-    private fun calcularResultado(): String {
-        // Aqui você pode obter o resultado com base nas respostas do usuário
-        // Por exemplo, você poderia passar as respostas da MainActivity para cá via Intent
-        return "Dominância: Alta\nInfluência: Baixa\nEstabilidade: Média\nConformidade: Alta"
-    }
 }
+

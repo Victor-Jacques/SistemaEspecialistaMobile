@@ -2,11 +2,15 @@ package com.example.sistemaespecialistamob
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
     private val apiRepository = ApiRepository()
@@ -15,6 +19,8 @@ class MainActivity : AppCompatActivity() {
     private val perfis: List<String> = listOf("dominancia", "influencia", "estabilidade", "conformidade")
     private val questionsPerPerfil = 5
     private val totalQuestions = perfis.size * questionsPerPerfil
+    val result = Resultado()
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -83,7 +89,8 @@ class MainActivity : AppCompatActivity() {
                 // Ao chegar na última pergunta, redireciona para a nova tela
                 val intent = Intent(this, ResultActivity::class.java)
                 startActivity(intent)
-                //finish() // Finaliza a Activity atual para remover do stack
+                calcularScore()
+                finish() // Finaliza a Activity atual para remover do stack
             }
         }
 
@@ -139,14 +146,63 @@ class MainActivity : AppCompatActivity() {
         selectedButton.setBackgroundColor(resources.getColor(R.color.purple_700))  // Cor de fundo quando selecionado
         selectedButton.setTextColor(resources.getColor(R.color.white))  // Cor de texto quando selecionado
 
-        // Armazenar a resposta
+        // Armazenar a resposta no array como valor de 1 a 5
+        val selectedValue = answerIndex + 1 // Converte de 0-4 para 1-5
         if (selectedAnswers.size > currentQuestionIndex) {
-            selectedAnswers[currentQuestionIndex] = answerIndex
+            selectedAnswers[currentQuestionIndex] = selectedValue
         } else {
-            selectedAnswers.add(answerIndex)
+            selectedAnswers.add(selectedValue)
         }
+        // Habilita o botão "Próxima Pergunta" após a seleção
         findViewById<MaterialButton>(R.id.nextButton).isEnabled = true
     }
+
+    private fun calcularScore() {
+        // Divida as respostas para os perfis
+        for(i in 0..19){
+            separa_resp(i)
+        }
+
+        val perfilResult: Map<String, List<Int>> = mapOf(
+            "dominancia" to result.dominancia,
+            "influencia" to result.influencia,
+            "estabilidade" to result.estabilidade,
+            "conformidade" to result.conformidade
+        )
+
+
+    }
+
+    private fun resultado(): String{
+
+        apiRepository.scoreCalc("dominancia", result.dominancia) { resultIndividual ->
+            if (resultIndividual != null) {
+                val sla = resultIndividual
+            } else {
+                Log.e("MainActivity", "Erro ao calcular o score completo.")
+            }
+        }
+
+        return ""
+    }
+
+    private fun separa_resp(i: Int){
+        if(i <= 5){
+            result.dominancia.add(selectedAnswers.get(i))
+        }
+        else if(i <= 10){
+            result.influencia.add(selectedAnswers.get(i))
+        }
+        else if(i <= 15){
+            result.estabilidade.add(selectedAnswers.get(i))
+        }
+        else if(i <= 20){
+            result.conformidade.add(selectedAnswers.get(i))
+        }
+
+    }
+
+
 
     private fun updateNavigationButtons() {
         findViewById<MaterialButton>(R.id.previousButton).visibility =
